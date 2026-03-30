@@ -2,6 +2,9 @@ import sys
 from itertools import combinations
 
 
+# load_transaction 함수 
+## 입력 파일을 읽어서 transaction list로 변환
+## 각 줄은 하나의 transaction을 의미하고, 공백과 탭으로 구분된 정수 item들을 set 형태로 저장
 def load_transactions(input_file):
     transactions = []
     with open(input_file, "r") as f:
@@ -14,11 +17,17 @@ def load_transactions(input_file):
     return transactions
 
 
+# format_itetmset 함수
+## itemset을 과제 출력 형식에 맞게 문자열로 변환
+## 오름차순으로 정렬하고, 중괄호 (brace)를 넣어서 감싸 반환
 def format_itemset(itemset):
     sorted_items = sorted(itemset)
     return "{" + ",".join(map(str, sorted_items)) + "}"
 
 
+# get_support_count 함수
+## 특정 itemtset이 전체 transaction에서 몇번 등장했는지 계산하는 함수
+## itemset이 transaction의 부분집합이면 해당 transaction에 등장한 것으로 계산
 def get_support_count(itemset, transactions):
     count = 0
     for transaction in transactions:
@@ -27,6 +36,9 @@ def get_support_count(itemset, transactions):
     return count
 
 
+# generate_candidate 함수 -> JOIN 단계
+## 이전 단계의 frequent(k-1)-itemset으로부터 k-itemset candidate 생성 
+## 두 itemset의 앞부분 k-2개가 같으면 합쳐서 새로운 k-itemset 후보를 만든다.
 def generate_candidates(prev_frequents, k):
     candidates = set()
     prev_list = list(prev_frequents)
@@ -43,7 +55,10 @@ def generate_candidates(prev_frequents, k):
 
     return candidates
 
-
+# prune_candidates 함수 - PRUNE 단계
+## Apriori Property 사용해서 후보들 제거한다
+## candidate의 모든 (k-1)-subset이 이전단계 frequent itemset에 포함되어 있어야 유지
+## 하나라도 있으면 제거
 def prune_candidates(candidates, prev_frequents):
     pruned = set()
 
@@ -58,7 +73,12 @@ def prune_candidates(candidates, prev_frequents):
 
     return pruned
 
-
+# apriori 함수 -> 모든 frequent itemset을 찾는 것이 목표!
+## 1. frequent 1-itemset 생성
+## 2. join step으로 후보 생성
+## 3. prune step 적용하여 필요없는 후보들 제거
+## 4. support count 계산을 하고 min_sup 이상인 값만 유지, 그 외는 제거
+## 5. 더 이상 frequent itemset
 def apriori(transactions, min_support_percent):
     total_transactions = len(transactions)
     min_support_count = total_transactions * (min_support_percent / 100.0)
@@ -105,6 +125,11 @@ def apriori(transactions, min_support_percent):
     return all_frequents, support_counts, total_transactions
 
 
+# generate_association_rules 함수
+## frequent itemset들로부터 모든 association rules을 생성하는 함수
+## 크기가 2인 이상인 frequent itemset들에 대해 가능한 모든 non-empty proper subset을 ㅣeft로 잡은 이후에 나머지를 right으로 두어 rule을 만든다.
+### support = support_count(itemset) / total_transactions * 100
+### confidence = support_count(itemset) / support_count(left) * 100
 def generate_association_rules(all_frequents, support_counts, total_transactions):
     rules = []
 
@@ -136,6 +161,10 @@ def generate_association_rules(all_frequents, support_counts, total_transactions
     return rules
 
 
+# write_output 함수
+## 생성된 association rules들을 출력 파일에 저장
+## 출력 형식 : itemset (tab) associative_itemset (tab) support (tab) confidence
+## 과제 형식 : itemset은 중괄호 형식으로 출력하고, support와 confidence 값은 소수점 둘째 자리까지 출력한다.
 def write_output(rules, output_file):
     with open(output_file, "w") as f:
         for left, right, support, confidence in rules:
@@ -147,7 +176,10 @@ def write_output(rules, output_file):
             )
             f.write(line)
 
-
+# main 함수
+## 명령 인자 오류를 따로 설정
+## 명령행 인자로 minimum support, 입력 파일명, 출력 파일명을 함께 입력하면
+## Apriori 알고리즘을 수행한 이후 association rule을 생성하고 결과를 저장
 def main():
     if len(sys.argv) != 4:
         print("Usage: python3 apriori.py <min_support_percent> <input_file> <output_file>")
